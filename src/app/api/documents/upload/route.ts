@@ -96,7 +96,9 @@ export async function POST(request: NextRequest) {
       uploadedDocuments.push(doc);
     }
     
-    // --- FIX 2: Return the array, not the singular doc ---
     return NextResponse.json(uploadedDocuments, { status: 201 });
+  } catch (error) {
+    console.error("POST /api/documents/upload error:", error);
+    return NextResponse.json({ error: "Failed to upload document" }, { status: 500 });
   }
 }
