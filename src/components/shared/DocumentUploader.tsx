@@ -58,33 +58,46 @@ export function DocumentUploader({
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
-  function handleFileSelect(selected: File) {
+  // Unified function to handle both drag-and-drop and click selections for arrays
+  function handleFilesAdded(selectedFiles: File[]) {
     setError(null);
-    if (!ALLOWED_TYPES.includes(selected.type)) {
-      setError("Invalid file type. Allowed: PDF, JPG, PNG, WebP");
-      return;
+    
+    // Filter out invalid files
+    const validFiles = selectedFiles.filter((f) => {
+      if (!ALLOWED_TYPES.includes(f.type)) return false;
+      if (f.size > MAX_SIZE) return false;
+      return true;
+    });
+
+    if (validFiles.length < selectedFiles.length) {
+      setError("Some files were skipped (invalid type or >20MB).");
     }
-    if (selected.size > MAX_SIZE) {
-      setError("File too large. Maximum size is 20MB.");
-      return;
-    }
-    setFiles(selected);
-    if (!docName) {
-      // Auto-fill name from filename (strip extension)
-      const base = selected.name.replace(/\.[^.]+$/, "");
-      setDocName(base);
+
+    if (validFiles.length > 0) {
+      setFiles((prev) => [...prev, ...validFiles]);
+      if (!docName) {
+        // Auto-fill name from the first valid filename (strip extension)
+        const base = validFiles[0].name.replace(/\.[^.]+$/, "");
+        setDocName(base);
+      }
     }
   }
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragOver(false);
-    const dropped = e.dataTransfer.files[0];
-    if (dropped) handleFileSelect(dropped);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFilesAdded(Array.from(e.dataTransfer.files));
+    }
+  }
+
+  function removeFile(indexToRemove: number) {
+    setFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+    if (files.length === 1) setError(null); // Clear errors if deleting the last file
   }
 
   async function handleUpload() {
-    if (!file || !docName.trim()) return;
+    if (files.length === 0 || !docName.trim()) return;
     setUploading(true);
     setError(null);
 
@@ -129,12 +142,10 @@ export function DocumentUploader({
     }
   }
 
-  const isPdf = file?.type === "application/pdf";
-
   return (
     <div className="space-y-4">
       {/* Drop zone */}
-      {!file ? (
+      {files.length === 0 ? (
         <div
           onDrop={handleDrop}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -152,30 +163,53 @@ export function DocumentUploader({
             multiple
             accept=".pdf,.jpg,.jpeg,.png,.webp"
             className="sr-only"
-            onChange={(e) => { if (e.target.files?.[0]) handleFileSelect(e.target.files[0]); }}
+            onChange={(e) => { 
+              if (e.target.files && e.target.files.length > 0) {
+                handleFilesAdded(Array.from(e.target.files)); 
+              }
+            }}
           />
           <Upload className="w-8 h-8 text-vault-text-faint mx-auto mb-2" />
-          <p className="text-sm text-vault-text-muted">Drop file here or click to browse</p>
+          <p className="text-sm text-vault-text-muted">Drop files here or click to browse</p>
           <p className="text-xs text-vault-text-faint mt-1">PDF, JPG, PNG, WebP — max 20MB</p>
         </div>
       ) : (
-        <div className="flex items-center gap-3 p-3 rounded-lg border border-vault-border bg-vault-bg">
-          {isPdf ? (
-            <FileText className="w-8 h-8 text-[#F5A623] shrink-0" />
-          ) : (
-            <FileIcon className="w-8 h-8 text-[#00C2FF] shrink-0" />
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-vault-text truncate">{file.name}</p>
-            <p className="text-xs text-vault-text-faint">{formatBytes(file.size)}</p>
+        <div className="space-y-2">
+          {/* List all selected files */}
+          {files.map((f, idx) => {
+            const isPdf = f.type === "application/pdf";
+            return (
+              <div key={idx} className="flex items-center gap-3 p-3 rounded-lg border border-vault-border bg-vault-bg">
+                {isPdf ? (
+                  <FileText className="w-8 h-8 text-[#F5A623] shrink-0" />
+                ) : (
+                  <FileIcon className="w-8 h-8 text-[#00C2FF] shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-vault-text truncate">{f.name}</p>
+                  <p className="text-xs text-vault-text-faint">{formatBytes(f.size)}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeFile(idx)}
+                  className="text-vault-text-faint hover:text-red-400 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            );
+          })}
+          
+          {/* Option to add more files to the queue */}
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="text-xs text-[#00C2FF] hover:underline"
+            >
+              + Add more files
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => { setFile(null); setError(null); }}
-            className="text-vault-text-faint hover:text-red-400 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
       )}
 
@@ -241,7 +275,7 @@ export function DocumentUploader({
         <button
           type="button"
           onClick={handleUpload}
-          disabled={!file || !docName.trim() || uploading}
+          disabled={files.length === 0 || !docName.trim() || uploading}
           className="flex items-center gap-2 px-4 py-2 rounded-md bg-[#00C2FF]/10 border border-[#00C2FF]/30 text-[#00C2FF] text-sm hover:bg-[#00C2FF]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {uploading ? (
