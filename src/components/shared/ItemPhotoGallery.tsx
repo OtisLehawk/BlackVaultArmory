@@ -13,14 +13,15 @@ export default function ItemPhotoGallery({ entityType, entityId }: ItemPhotoGall
   const [photos, setPhotos] = useState<UploadedDocument[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Fetch only the photos on load
   useEffect(() => {
     const fetchPhotos = async () => {
       try {
-        const res = await fetch(`/api/documents?entityType=${entityType}&entityId=${entityId}`);
+        const query = entityType === "firearm" ? `firearmId=${entityId}` : `accessoryId=${entityId}`;
+        
+        const res = await fetch(`/api/documents?${query}`);
         if (!res.ok) return;
         const data = await res.json();
-        // Filter so we only keep photos
+        
         setPhotos(data.filter((doc: UploadedDocument) => doc.type === "PHOTO"));
       } catch (error) {
         console.error("Failed to load photos", error);
@@ -34,7 +35,10 @@ export default function ItemPhotoGallery({ entityType, entityId }: ItemPhotoGall
     try {
       const res = await fetch(`/api/documents/${id}`, { method: "DELETE" });
       if (res.ok) {
+        // Remove it from the local state so it disappears from the grid immediately
         setPhotos((prev) => prev.filter((p) => p.id !== id));
+      } else {
+        console.error("Failed to delete the photo from the server");
       }
     } catch (error) {
       console.error("Failed to delete photo", error);
@@ -61,7 +65,7 @@ export default function ItemPhotoGallery({ entityType, entityId }: ItemPhotoGall
           <DocumentUploader
             entityType={entityType}
             entityId={entityId}
-            defaultDocType="PHOTO" // Force it to be a photo
+            defaultDocType="PHOTO"
             onUploadComplete={(doc) => {
               if (doc.type === "PHOTO") setPhotos((prev) => [...prev, doc]);
             }}
