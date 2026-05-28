@@ -9,6 +9,7 @@ import { ItemDocumentPanel } from "@/components/shared/ItemDocumentPanel";
 import { RoundCountBadge } from "@/components/shared/RoundCountBadge";
 import { RemoveImageButton } from "@/components/shared/RemoveImageButton";
 import { MaintenanceSection } from "@/components/vault/MaintenanceSection";
+import ItemPhotoGallery from "@/components/shared/ItemPhotoGallery";
 import {
   ArrowLeft,
   Edit,
