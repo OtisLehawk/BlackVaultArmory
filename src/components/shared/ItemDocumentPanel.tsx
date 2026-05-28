@@ -1,195 +1,114 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, FileText, Trash2, Upload, X } from "lucide-react";
-import { DocumentUploader, type UploadedDocument } from "@/components/shared/DocumentUploader";
+import { useState, useEffect } from "react";
+import { Trash2, Upload, X } from "lucide-react";
+import { DocumentUploader, type UploadedDocument } from "./DocumentUploader";
 
-interface ItemDocumentPanelProps {
+interface ItemPhotoGalleryProps {
   entityType: "firearm" | "accessory";
   entityId: string;
-  title?: string;
 }
 
-type DisplayTag = {
-  label: string;
-  className: string;
-};
-
-function formatBytes(bytes: number | null) {
-  if (!bytes) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function tagForDocument(doc: UploadedDocument): DisplayTag {
-  if (doc.type === "RECEIPT") {
-    return { label: "Receipt", className: "border-[#00C2FF]/30 text-[#00C2FF]" };
-  }
-  if (doc.type === "NFA_TAX_STAMP") {
-    return { label: "Tax Stamp", className: "border-[#F5A623]/30 text-[#F5A623]" };
-  }
-  if (doc.type === "PHOTO" || doc.mimeType?.startsWith("image/")) {
-    return { label: "Photo", className: "border-[#00C853]/30 text-[#00C853]" };
-  }
-  return { label: "Other", className: "border-vault-border text-vault-text-faint" };
-}
-
-export function ItemDocumentPanel({ entityType, entityId, title = "Documents" }: ItemDocumentPanelProps) {
-  const [documents, setDocuments] = useState<UploadedDocument[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showUploader, setShowUploader] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+export default function ItemPhotoGallery({ entityType, entityId }: ItemPhotoGalleryProps) {
+  const [photos, setPhotos] = useState<UploadedDocument[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
-    const query = entityType === "firearm" ? `firearmId=${entityId}` : `accessoryId=${entityId}`;
-    fetch(`/api/documents?${query}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setDocuments(data);
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [entityId, entityType]);
+    const fetchPhotos = async () => {
+      try {
+        const query = entityType === "firearm" ? `firearmId=${entityId}` : `accessoryId=${entityId}`;
+        
+        const res = await fetch(`/api/documents?${query}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        setPhotos(data.filter((doc: UploadedDocument) => doc.type === "PHOTO"));
+      } catch (error) {
+        console.error("Failed to load photos", error);
+      }
+    };
+    fetchPhotos();
+  }, [entityType, entityId]);
 
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this document?")) return;
-    setDeletingId(id);
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this photo?")) return;
     try {
       const res = await fetch(`/api/documents/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        setFeedback({ type: "error", text: json?.error ?? "Could not delete document." });
-        return;
+      if (res.ok) {
+        setPhotos((prev) => prev.filter((p) => p.id !== id));
+      } else {
+        console.error("Failed to delete the photo from the server");
       }
-      setDocuments((prev) => prev.filter((d) => d.id !== id));
-      setFeedback({ type: "success", text: "Document deleted." });
-    } catch {
-      setFeedback({ type: "error", text: "Network error — could not delete document." });
-    } finally {
-      setDeletingId(null);
+    } catch (error) {
+      console.error("Failed to delete photo", error);
     }
-  }
-
-  const emptyText = useMemo(() => {
-    if (entityType === "firearm") {
-      return "No docs attached yet. Upload receipts, photos, and tax stamps directly on this firearm.";
-    }
-    return "No docs attached yet. Upload receipts, photos, and tax stamps directly on this accessory.";
-  }, [entityType]);
-
-  // --- NEW CODE: Filter out the photos so they don't show in the document list ---
-  const nonPhotoDocuments = documents.filter((doc) => doc.type !== "PHOTO");
+  };
 
   return (
     <div className="rounded-xl border border-vault-border bg-vault-surface overflow-hidden">
+      {/* Header aligned perfectly to match ItemDocumentPanel */}
       <div className="px-4 py-3 border-b border-vault-border flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-vault-text">{title}</h3>
-          {/* Use nonPhotoDocuments.length so the count is accurate */}
-          <p className="text-xs text-vault-text-faint">{nonPhotoDocuments.length} attached</p>
+          <h3 className="text-sm font-semibold text-vault-text">Photo Gallery</h3>
+          <p className="text-xs text-vault-text-faint">{photos.length} attached</p>
         </div>
         <button
-          onClick={() => setShowUploader((v) => !v)}
+          onClick={() => setIsUploading((v) => !v)}
           className="flex items-center gap-1.5 text-xs bg-[#00C2FF]/10 border border-[#00C2FF]/30 text-[#00C2FF] hover:bg-[#00C2FF]/20 px-2.5 py-1.5 rounded transition-colors"
         >
-          {showUploader ? <X className="w-3.5 h-3.5" /> : <Upload className="w-3.5 h-3.5" />}
-          {showUploader ? "Close" : "Upload"}
+          {isUploading ? <X className="w-3.5 h-3.5" /> : <Upload className="w-3.5 h-3.5" />}
+          {isUploading ? "Close" : "Upload"}
         </button>
       </div>
 
-      {showUploader && (
+      {isUploading && (
         <div className="p-4 border-b border-vault-border bg-vault-bg/50">
           <DocumentUploader
             entityType={entityType}
             entityId={entityId}
-            defaultDocType="RECEIPT"
+            defaultDocType="PHOTO"
             onUploadComplete={(doc) => {
-              setDocuments((prev) => [doc, ...prev]);
-              setShowUploader(false);
+              if (doc.type === "PHOTO") {
+                setPhotos((prev) => [...prev, doc]);
+                setIsUploading(false);
+              }
             }}
-            onCancel={() => setShowUploader(false)}
+            onCancel={() => setIsUploading(false)}
           />
         </div>
       )}
 
-      {feedback && (
-        <div
-          className={`mx-4 mt-4 rounded-md border px-3 py-2 text-xs ${
-            feedback.type === "success"
-              ? "border-[#00C853]/30 bg-[#00C853]/10 text-[#00C853]"
-              : "border-[#E53935]/30 bg-[#E53935]/10 text-[#E53935]"
-          }`}
-        >
-          {feedback.text}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="py-8 flex justify-center">
-          <div className="w-5 h-5 border-2 border-[#00C2FF]/30 border-t-[#00C2FF] rounded-full animate-spin" />
-        </div>
-      ) : nonPhotoDocuments.length === 0 ? ( // <-- Use nonPhotoDocuments here
-        <div className="p-6 text-center">
-          <FileText className="w-8 h-8 text-vault-border mx-auto mb-2" />
-          <p className="text-xs text-vault-text-faint">{emptyText}</p>
-        </div>
-      ) : (
-        <div className="divide-y divide-vault-border">
-          {/* Use nonPhotoDocuments for the mapping loop below */}
-          {nonPhotoDocuments.map((doc) => {
-            const tag = tagForDocument(doc);
-            return (
-              <div key={doc.id} className="px-4 py-3 flex items-start gap-3 group hover:bg-vault-border/20 transition-colors">
-                <div className="w-9 h-9 rounded-md border border-vault-border bg-vault-bg flex items-center justify-center shrink-0">
-                  <FileText className="w-4 h-4 text-vault-text-muted" />
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm text-vault-text font-medium truncate">{doc.name}</p>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded border font-mono ${tag.className}`}>
-                      {tag.label}
-                    </span>
+      <div className="p-4">
+        {photos.length === 0 && !isUploading ? (
+          <div className="p-6 text-center text-xs text-vault-text-faint bg-vault-bg rounded-lg border border-vault-border/50">
+            No photos uploaded yet.
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {photos.map((photo) => (
+              <div key={photo.id} className="relative group rounded-lg overflow-hidden border border-vault-border bg-vault-bg aspect-square">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photo.fileUrl}
+                  alt={photo.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => handleDelete(photo.id)}
+                      className="p-1.5 bg-red-500/20 text-red-400 rounded hover:bg-red-500/40"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
-                  <div className="mt-0.5 flex items-center gap-2 text-xs text-vault-text-faint flex-wrap">
-                    <span>{new Date(doc.createdAt).toLocaleDateString()}</span>
-                    {doc.fileSize ? <span>{formatBytes(doc.fileSize)}</span> : null}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <a
-                    href={doc.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 px-2 py-1 rounded border border-vault-border text-xs text-vault-text-muted hover:text-[#00C2FF] hover:border-[#00C2FF]/30 transition-colors"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    View
-                  </a>
-                  <a
-                    href={doc.fileUrl}
-                    download={doc.name}
-                    className="px-2 py-1 rounded border border-vault-border text-xs text-vault-text-muted hover:text-[#00C2FF] hover:border-[#00C2FF]/30 transition-colors"
-                  >
-                    Download
-                  </a>
-                  <button
-                    onClick={() => handleDelete(doc.id)}
-                    disabled={deletingId === doc.id}
-                    className="p-1.5 rounded text-vault-text-faint hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <p className="text-xs text-white truncate px-1">{photo.name}</p>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
