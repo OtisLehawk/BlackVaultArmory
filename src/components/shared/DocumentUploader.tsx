@@ -68,7 +68,7 @@ export function DocumentUploader({
       setError("File too large. Maximum size is 20MB.");
       return;
     }
-    setFile(selected);
+    setFiles(selected);
     if (!docName) {
       // Auto-fill name from filename (strip extension)
       const base = selected.name.replace(/\.[^.]+$/, "");
