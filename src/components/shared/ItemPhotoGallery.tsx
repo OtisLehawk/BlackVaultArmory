@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Image as ImageIcon, Trash2 } from "lucide-react";
-import DocumentUploader, { UploadedDocument } from "./DocumentUploader";
+import { DocumentUploader, type UploadedDocument } from "./DocumentUploader";
 
 interface ItemPhotoGalleryProps {
   entityType: "firearm" | "accessory";
