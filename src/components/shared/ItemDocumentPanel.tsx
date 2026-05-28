@@ -80,12 +80,16 @@ export function ItemDocumentPanel({ entityType, entityId, title = "Documents" }:
     return "No docs attached yet. Upload receipts, photos, and tax stamps directly on this accessory.";
   }, [entityType]);
 
+  // --- NEW CODE: Filter out the photos so they don't show in the document list ---
+  const nonPhotoDocuments = documents.filter((doc) => doc.type !== "PHOTO");
+
   return (
     <div className="rounded-xl border border-vault-border bg-vault-surface overflow-hidden">
       <div className="px-4 py-3 border-b border-vault-border flex items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-vault-text">{title}</h3>
-          <p className="text-xs text-vault-text-faint">{documents.length} attached</p>
+          {/* Use nonPhotoDocuments.length so the count is accurate */}
+          <p className="text-xs text-vault-text-faint">{nonPhotoDocuments.length} attached</p>
         </div>
         <button
           onClick={() => setShowUploader((v) => !v)}
@@ -127,14 +131,15 @@ export function ItemDocumentPanel({ entityType, entityId, title = "Documents" }:
         <div className="py-8 flex justify-center">
           <div className="w-5 h-5 border-2 border-[#00C2FF]/30 border-t-[#00C2FF] rounded-full animate-spin" />
         </div>
-      ) : documents.length === 0 ? (
+      ) : nonPhotoDocuments.length === 0 ? ( // <-- Use nonPhotoDocuments here
         <div className="p-6 text-center">
           <FileText className="w-8 h-8 text-vault-border mx-auto mb-2" />
           <p className="text-xs text-vault-text-faint">{emptyText}</p>
         </div>
       ) : (
         <div className="divide-y divide-vault-border">
-          {documents.map((doc) => {
+          {/* Use nonPhotoDocuments for the mapping loop below */}
+          {nonPhotoDocuments.map((doc) => {
             const tag = tagForDocument(doc);
             return (
               <div key={doc.id} className="px-4 py-3 flex items-start gap-3 group hover:bg-vault-border/20 transition-colors">
