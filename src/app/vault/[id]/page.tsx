@@ -272,7 +272,6 @@ export default async function FirearmDetailPage({
         <ItemPhotoGallery
           entityType="firearm"
           entityId={firearm.id}
-          title="Photo Gallery"
         />
         
         <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6">
