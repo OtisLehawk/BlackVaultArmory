@@ -34,68 +34,69 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
 
-    const file = formData.get("file") as File | null;
+    const files = formData.getAll("files") as File[];
     const name = formData.get("name") as string | null;
     const type = (formData.get("type") as string | null) || "RECEIPT";
     const firearmId = formData.get("firearmId") as string | null;
     const accessoryId = formData.get("accessoryId") as string | null;
     const notes = formData.get("notes") as string | null;
 
-    if (!file) {
-      return NextResponse.json({ error: "Missing required field: file" }, { status: 400 });
+    // --- FIX 1: Updated Validation ---
+    if (!files || files.length === 0) {
+      return NextResponse.json({ error: "No files provided" }, { status: 400 });
     }
     if (!name) {
       return NextResponse.json({ error: "Missing required field: name" }, { status: 400 });
     }
 
-    if (file.size > MAX_SIZE) {
-      return NextResponse.json({ error: "File too large. Maximum size is 20MB." }, { status: 400 });
+    const uploadedDocuments = [];
+    
+    for (const file of files) {
+      // Check the size for each individual file inside the loop
+      if (file.size > MAX_SIZE) {
+        return NextResponse.json({ error: `File ${file.name} is too large. Maximum size is 20MB.` }, { status: 400 });
+      }
+
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const detected = detectFileSignature(buffer);
+    
+      if (!detected || !ALLOWED_EXTENSIONS.has(detected.extension)) {
+        continue; 
+      }
+    
+      const fileId = randomUUID().replace(/-/g, "");
+      const fileName = `${fileId}.${detected.extension}`;
+      const relativeUrl = `/api/files/documents/${fileName}`;
+      const uploadDir = path.join(getCanonicalUploadsRoot(), "documents");
+      const filePath = path.join(uploadDir, fileName);
+    
+      await fs.mkdir(uploadDir, { recursive: true });
+      await fs.writeFile(filePath, buffer);
+    
+      const finalDocName = files.length > 1 ? `${name} - ${file.name}` : name;
+    
+      const doc = await prisma.document.create({
+        data: {
+          name: finalDocName,
+          type,
+          fileUrl: relativeUrl,
+          fileSize: file.size,
+          mimeType: detected.mimeType,
+          notes: notes || null,
+          firearmId: firearmId || null,
+          accessoryId: accessoryId || null,
+        },
+        include: {
+          firearm: { select: { id: true, name: true } },
+          accessory: { select: { id: true, name: true } },
+        },
+      });
+    
+      uploadedDocuments.push(doc);
     }
-
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const detected = detectFileSignature(buffer);
-
-    if (!detected || !ALLOWED_EXTENSIONS.has(detected.extension)) {
-      return NextResponse.json(
-        { error: `Invalid file type. Allowed: ${Array.from(ALLOWED_EXTENSIONS).join(", ")}` },
-        { status: 400 }
-      );
-    }
-
-    // Generate a unique ID for the file
-    const fileId = randomUUID().replace(/-/g, "");
-
-    const fileName = `${fileId}.${detected.extension}`;
-    const relativeUrl = `/api/files/documents/${fileName}`;
-
-    const uploadDir = path.join(getCanonicalUploadsRoot(), "documents");
-    const filePath = path.join(uploadDir, fileName);
-
-    await fs.mkdir(uploadDir, { recursive: true });
-
-    await fs.writeFile(filePath, buffer);
-
-    const doc = await prisma.document.create({
-      data: {
-        name,
-        type,
-        fileUrl: relativeUrl,
-        fileSize: file.size,
-        mimeType: detected.mimeType,
-        notes: notes || null,
-        firearmId: firearmId || null,
-        accessoryId: accessoryId || null,
-      },
-      include: {
-        firearm: { select: { id: true, name: true } },
-        accessory: { select: { id: true, name: true } },
-      },
-    });
-
-    return NextResponse.json(doc, { status: 201 });
-  } catch (error) {
-    console.error("POST /api/documents/upload error:", error);
-    return NextResponse.json({ error: "Failed to upload document" }, { status: 500 });
+    
+    // --- FIX 2: Return the array, not the singular doc ---
+    return NextResponse.json(uploadedDocuments, { status: 201 });
   }
 }
