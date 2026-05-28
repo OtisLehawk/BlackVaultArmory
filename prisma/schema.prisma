@@ -27,6 +27,7 @@ model Firearm {
   imageUrl        String?
   // imageSource: "uploaded" | "google_cse" | "seed" | "url"
   imageSource     String?
+  attachedAccessories Accessory[] @relation("AttachedAccessories")
 
   // Maintenance tracking
   lastMaintenanceDate DateTime?
@@ -105,12 +106,20 @@ model Accessory {
   imageUrl               String?
   imageSource            String?
 
+
   // Round count persists with the accessory across all builds
   roundCount             Int             @default(0)
   roundCountLogs         RoundCountLog[]
 
   buildSlots             BuildSlot[]
   documents              Document[]
+
+  // The new quantity field, defaulting to 1
+  quantity          Int       @default(1)
+
+  // The direct link to a firearm
+  attachedFirearmId String?
+  attachedFirearm   Firearm?  @relation("AttachedAccessories", fields: [attachedFirearmId], references: [id])
 
   // Comma-separated compatible values, e.g. "RIFLE,SMG"
   compatibleFirearmTypes String?
