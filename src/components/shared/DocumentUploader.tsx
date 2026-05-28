@@ -50,7 +50,7 @@ export function DocumentUploader({
   onCancel,
 }: DocumentUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [docName, setDocName] = useState("");
   const [docType, setDocType] = useState<"RECEIPT" | "PHOTO" | "NFA_TAX_STAMP" | "OTHER">(defaultDocType);
   const [notes, setNotes] = useState("");
@@ -90,7 +90,9 @@ export function DocumentUploader({
 
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      files.forEach((f) => {
+        formData.append("files", f);
+      });
       formData.append("name", docName.trim());
       formData.append("type", docType);
       if (entityType && entityId) {
@@ -107,6 +109,12 @@ export function DocumentUploader({
       if (!res.ok) {
         const json = await res.json().catch(() => ({} as { error?: string }));
         throw new Error(json.error ?? "Upload failed");
+        const uploadedDocs = await response.json()
+        uploadedDocs.forEach((doc: UploadedDocument) => {
+          onUploadComplete(doc);
+        });
+        setFiles([]);
+        setDocName("");
       }
 
       const doc: UploadedDocument = await res.json();
@@ -138,6 +146,7 @@ export function DocumentUploader({
           <input
             ref={fileInputRef}
             type="file"
+            multiple
             accept=".pdf,.jpg,.jpeg,.png,.webp"
             className="sr-only"
             onChange={(e) => { if (e.target.files?.[0]) handleFileSelect(e.target.files[0]); }}
