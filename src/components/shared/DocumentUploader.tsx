@@ -109,16 +109,19 @@ export function DocumentUploader({
       if (!res.ok) {
         const json = await res.json().catch(() => ({} as { error?: string }));
         throw new Error(json.error ?? "Upload failed");
-        const uploadedDocs = await response.json()
-        uploadedDocs.forEach((doc: UploadedDocument) => {
-          onUploadComplete(doc);
-        });
-        setFiles([]);
-        setDocName("");
       }
 
-      const doc: UploadedDocument = await res.json();
-      onUploadComplete(doc);
+      // 1. Parse the array of documents
+      const uploadedDocs: UploadedDocument[] = await res.json();
+      
+      // 2. Loop through and trigger the complete callback for each
+      uploadedDocs.forEach((doc) => {
+        onUploadComplete(doc);
+      });
+
+      // 3. Reset the form
+      setFiles([]);
+      setDocName("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
