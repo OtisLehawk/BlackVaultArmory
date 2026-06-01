@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SLOT_TYPES, SLOT_TYPE_LABELS, COMMON_CALIBERS } from "@/lib/types";
@@ -19,10 +19,23 @@ export default function NewAccessoryPage() {
   const [caliberInput, setCaliberInput] = useState("");
   const [caliberDropdownOpen, setCaliberDropdownOpen] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  
+  // --- NEW CODE: State to hold the list of firearms for the dropdown ---
+  const [firearms, setFirearms] = useState<{ id: string; name: string }[]>([]);
 
   const filteredCalibers = COMMON_CALIBERS.filter((c) =>
     c.toLowerCase().includes(caliberInput.toLowerCase())
   );
+
+  // --- NEW CODE: Fetch available firearms when the page loads ---
+  useEffect(() => {
+    fetch("/api/firearms")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setFirearms(data);
+      })
+      .catch((err) => console.error("Failed to load firearms", err));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -34,6 +47,8 @@ export default function NewAccessoryPage() {
 
     const parsedPurchasePrice = Number(data.get("purchasePrice"));
     const parsedReplacementInterval = Number(data.get("replacementIntervalDays"));
+    const parsedQuantity = Number(data.get("quantity"));
+
     const payload = {
       name: data.get("name") as string,
       manufacturer: data.get("manufacturer") as string,
@@ -54,6 +69,9 @@ export default function NewAccessoryPage() {
           ? parsedReplacementInterval
           : null,
       initialRoundCount: data.get("initialRoundCount") ? Number(data.get("initialRoundCount")) : null,
+      // --- NEW CODE: Send the quantity and firearm ID to the API ---
+      quantity: Number.isFinite(parsedQuantity) && parsedQuantity > 0 ? parsedQuantity : 1,
+      attachedFirearmId: (data.get("attachedFirearmId") as string) || null,
     };
 
     try {
@@ -127,6 +145,38 @@ export default function NewAccessoryPage() {
                 placeholder="e.g. Trijicon ACOG 4x32"
                 className={INPUT_CLASS}
               />
+            </div>
+
+            {/* --- NEW CODE: Quantity and Direct Attachment Row --- */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div className="sm:col-span-1">
+                <label htmlFor="quantity" className={LABEL_CLASS}>
+                  Quantity <span className="text-[#E53935]">*</span>
+                </label>
+                <input
+                  id="quantity"
+                  name="quantity"
+                  type="number"
+                  min="1"
+                  defaultValue="1"
+                  required
+                  className={INPUT_CLASS}
+                />
+              </div>
+              <div className="sm:col-span-3">
+                <label htmlFor="attachedFirearmId" className={LABEL_CLASS}>
+                  Attach to Firearm
+                  <HelpTip text="Directly link this accessory to a specific firearm without creating a custom build loadout." />
+                </label>
+                <select id="attachedFirearmId" name="attachedFirearmId" className={INPUT_CLASS}>
+                  <option value="">-- None (Keep in Inventory) --</option>
+                  {firearms.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
