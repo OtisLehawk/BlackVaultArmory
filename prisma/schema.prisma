@@ -119,7 +119,7 @@ model Accessory {
 
   // The direct link to a firearm
   attachedFirearmId String?
-  attachedFirearm   Firearm?  @relation("AttachedAccessories", fields: [attachedFirearmId], references: [id]), onDelete: SetNull)
+  attachedFirearm   Firearm?  @relation("AttachedAccessories", fields: [attachedFirearmId], references: [id], onDelete: SetNull)
 
   // Comma-separated compatible values, e.g. "RIFLE,SMG"
   compatibleFirearmTypes String?
