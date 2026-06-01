@@ -114,15 +114,12 @@ model Accessory {
   buildSlots             BuildSlot[]
   documents              Document[]
 
-  attachedFirearmId String?
-  attachedFirearm   Firearm?  @relation("AttachedAccessories", fields: [attachedFirearmId], references: [id], onDelete: SetNull)
-
   // The new quantity field, defaulting to 1
   quantity          Int       @default(1)
 
   // The direct link to a firearm
   attachedFirearmId String?
-  attachedFirearm   Firearm?  @relation("AttachedAccessories", fields: [attachedFirearmId], references: [id])
+  attachedFirearm   Firearm?  @relation("AttachedAccessories", fields: [attachedFirearmId], references: [id]), onDelete: SetNull)
 
   // Comma-separated compatible values, e.g. "RIFLE,SMG"
   compatibleFirearmTypes String?
