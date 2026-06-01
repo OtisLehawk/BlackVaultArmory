@@ -1,13 +1,12 @@
 # BlackVault
 
 
-
-### Updates
 ---
+### Updates
 Added:
-Ablility to upload multiple images of firearms.
-Photo Gallery to each firearm to log images
-Ability to assign an accessory to a firearm for things like slings or scopes. 
+- Ablility to upload multiple images of firearms.
+- Photo Gallery to each firearm to log images
+- Ability to assign an accessory to a firearm for things like slings or scopes. 
 
 ---
 
