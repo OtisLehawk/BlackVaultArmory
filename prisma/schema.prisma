@@ -33,6 +33,9 @@ model Firearm {
   lastMaintenanceDate DateTime?
   maintenanceIntervalDays Int?
 
+  attachedFirearmId String?
+  attachedFirearm   Firearm?  @relation("AttachedAccessories", fields: [attachedFirearmId], references: [id], onDelete: SetNull)
+
   builds           Build[]
   rangeSessions    RangeSession[]
   documents        Document[]
