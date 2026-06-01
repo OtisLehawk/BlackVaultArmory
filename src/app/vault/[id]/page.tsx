@@ -23,6 +23,7 @@ import {
   Hash,
   FileText,
   TrendingUp,
+  Package, // <-- Added Package icon for the new section
 } from "lucide-react";
 
 const FIREARM_TYPE_LABELS: Record<string, string> = {
@@ -84,6 +85,10 @@ async function getFirearm(id: string) {
       },
       maintenanceLogs: {
         orderBy: { date: "desc" },
+      },
+      // --- NEW CODE: Ask database for directly attached accessories ---
+      attachedAccessories: {
+        orderBy: { name: "asc" },
       },
       builds: {
         include: {
@@ -276,113 +281,172 @@ export default async function FirearmDetailPage({
         
         <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6">
           <div className="space-y-6">
-        {/* Builds Section */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Layers className="w-4 h-4 text-[#00C2FF]" />
-              <h2 className="text-sm font-semibold tracking-widest uppercase text-[#00C2FF]">
-                Builds
-              </h2>
-            </div>
-            <Link
-              href={`/vault/${id}/builds/new`}
-              className="flex items-center gap-1.5 text-xs bg-[#00C2FF]/10 border border-[#00C2FF]/30 text-[#00C2FF] hover:bg-[#00C2FF]/20 px-3 py-1.5 rounded transition-colors"
-            >
-              <Plus className="w-3 h-3" />
-              New Build
-            </Link>
-          </div>
-
-          {firearm.builds.length === 0 ? (
-            <div className="bg-vault-surface border border-vault-border rounded-lg p-10 text-center">
-              <div className="w-12 h-12 rounded-full bg-[#00C2FF]/10 border border-[#00C2FF]/20 flex items-center justify-center mx-auto mb-4">
-                <Layers className="w-6 h-6 text-[#00C2FF]" />
+            
+            {/* --- NEW SECTION: Directly Attached Accessories --- */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-[#00C2FF]" />
+                  <h2 className="text-sm font-semibold tracking-widest uppercase text-[#00C2FF]">
+                    Attached Accessories
+                  </h2>
+                </div>
+                <Link
+                  href="/accessories/new"
+                  className="flex items-center gap-1.5 text-xs bg-[#00C2FF]/10 border border-[#00C2FF]/30 text-[#00C2FF] hover:bg-[#00C2FF]/20 px-3 py-1.5 rounded transition-colors"
+                >
+                  <Plus className="w-3 h-3" />
+                  Add Accessory
+                </Link>
               </div>
-              <h3 className="text-sm font-semibold text-vault-text mb-2">No builds yet</h3>
-              <p className="text-xs text-vault-text-muted mb-4 max-w-xs mx-auto">
-                Create a build to start configuring accessories and attachments for this firearm.
-              </p>
-              <Link
-                href={`/vault/${id}/builds/new`}
-                className="inline-flex items-center gap-2 text-xs bg-[#00C2FF]/10 border border-[#00C2FF]/30 text-[#00C2FF] hover:bg-[#00C2FF]/20 px-4 py-2 rounded transition-colors"
-              >
-                <Plus className="w-3 h-3" />
-                Create First Build
-              </Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {firearm.builds.map((build) => {
-                const filledSlots = build.slots.filter((s) => s.accessoryId);
-                return (
-                  <div
-                    key={build.id}
-                    className={`bg-vault-surface border rounded-lg p-4 ${
-                      build.isActive
-                        ? "border-[#00C853]/40"
-                        : "border-vault-border hover:border-vault-text-muted/30"
-                    } transition-colors`}
-                  >
-                    {/* Build header */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <h3 className="text-sm font-semibold text-vault-text truncate">
-                            {build.name}
-                          </h3>
-                          {build.isActive && (
-                            <span className="flex items-center gap-1 text-[10px] text-[#00C853] border border-[#00C853]/40 px-1.5 py-0.5 rounded font-mono uppercase shrink-0">
-                              <CheckCircle2 className="w-2.5 h-2.5" />
-                              Active
-                            </span>
-                          )}
-                        </div>
-                        {build.description && (
-                          <p className="text-xs text-vault-text-muted truncate">{build.description}</p>
+
+              {firearm.attachedAccessories.length === 0 ? (
+                <div className="bg-vault-surface border border-vault-border rounded-lg p-8 text-center">
+                  <p className="text-xs text-vault-text-muted">
+                    No directly attached accessories. Add one from the Accessories tab.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {firearm.attachedAccessories.map((acc) => (
+                    <Link
+                      key={acc.id}
+                      href={`/accessories/${acc.id}`}
+                      className="bg-vault-surface border border-vault-border rounded-lg p-4 hover:border-vault-text-muted/30 transition-colors block group"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="text-sm font-semibold text-vault-text truncate pr-2 group-hover:text-[#00C2FF] transition-colors">
+                          {acc.name}
+                        </h3>
+                        {acc.quantity > 1 && (
+                          <span className="text-[10px] font-mono bg-[#00C2FF]/10 border border-[#00C2FF]/30 text-[#00C2FF] px-1.5 py-0.5 rounded shrink-0">
+                            x{acc.quantity}
+                          </span>
                         )}
                       </div>
-                    </div>
-
-                    {/* Slot summary */}
-                    <div className="mb-4">
-                      <p className="text-xs text-vault-text-faint mb-2">
-                        {filledSlots.length} of {build.slots.length} slot{build.slots.length !== 1 ? "s" : ""} filled
+                      <p className="text-xs text-vault-text-muted truncate">
+                        {acc.manufacturer} {acc.model ? `· ${acc.model}` : ""}
                       </p>
-                      {filledSlots.length > 0 && (
-                        <div className="space-y-1">
-                          {filledSlots.slice(0, 4).map((slot) => (
-                            <div key={slot.id} className="flex items-center gap-2">
-                              <span className="text-[10px] font-mono text-vault-text-faint w-24 shrink-0">
-                                {SLOT_TYPE_LABELS[slot.slotType] ?? slot.slotType}
-                              </span>
-                              <span className="text-xs text-vault-text-muted truncate">
-                                {slot.accessory?.name ?? "—"}
-                              </span>
+                      <div className="mt-3 flex items-center gap-2">
+                        <span className="text-[10px] uppercase tracking-widest bg-vault-bg border border-vault-border text-vault-text-faint px-2 py-0.5 rounded">
+                          {SLOT_TYPE_LABELS[acc.type] ?? acc.type}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* --- END NEW SECTION --- */}
+
+            {/* Builds Section */}
+            <div>
+              <div className="flex items-center justify-between mb-4 mt-6">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-[#00C2FF]" />
+                  <h2 className="text-sm font-semibold tracking-widest uppercase text-[#00C2FF]">
+                    Advanced Builds
+                  </h2>
+                </div>
+                <Link
+                  href={`/vault/${id}/builds/new`}
+                  className="flex items-center gap-1.5 text-xs bg-[#00C2FF]/10 border border-[#00C2FF]/30 text-[#00C2FF] hover:bg-[#00C2FF]/20 px-3 py-1.5 rounded transition-colors"
+                >
+                  <Plus className="w-3 h-3" />
+                  New Build
+                </Link>
+              </div>
+
+              {firearm.builds.length === 0 ? (
+                <div className="bg-vault-surface border border-vault-border rounded-lg p-10 text-center">
+                  <div className="w-12 h-12 rounded-full bg-[#00C2FF]/10 border border-[#00C2FF]/20 flex items-center justify-center mx-auto mb-4">
+                    <Layers className="w-6 h-6 text-[#00C2FF]" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-vault-text mb-2">No builds yet</h3>
+                  <p className="text-xs text-vault-text-muted mb-4 max-w-xs mx-auto">
+                    Create a build to configure deep slot-based attachments.
+                  </p>
+                  <Link
+                    href={`/vault/${id}/builds/new`}
+                    className="inline-flex items-center gap-2 text-xs bg-[#00C2FF]/10 border border-[#00C2FF]/30 text-[#00C2FF] hover:bg-[#00C2FF]/20 px-4 py-2 rounded transition-colors"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Create First Build
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {firearm.builds.map((build) => {
+                    const filledSlots = build.slots.filter((s) => s.accessoryId);
+                    return (
+                      <div
+                        key={build.id}
+                        className={`bg-vault-surface border rounded-lg p-4 ${
+                          build.isActive
+                            ? "border-[#00C853]/40"
+                            : "border-vault-border hover:border-vault-text-muted/30"
+                        } transition-colors`}
+                      >
+                        {/* Build header */}
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <h3 className="text-sm font-semibold text-vault-text truncate">
+                                {build.name}
+                              </h3>
+                              {build.isActive && (
+                                <span className="flex items-center gap-1 text-[10px] text-[#00C853] border border-[#00C853]/40 px-1.5 py-0.5 rounded font-mono uppercase shrink-0">
+                                  <CheckCircle2 className="w-2.5 h-2.5" />
+                                  Active
+                                </span>
+                              )}
                             </div>
-                          ))}
-                          {filledSlots.length > 4 && (
-                            <p className="text-[10px] text-vault-text-faint">
-                              +{filledSlots.length - 4} more
-                            </p>
+                            {build.description && (
+                              <p className="text-xs text-vault-text-muted truncate">{build.description}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Slot summary */}
+                        <div className="mb-4">
+                          <p className="text-xs text-vault-text-faint mb-2">
+                            {filledSlots.length} of {build.slots.length} slot{build.slots.length !== 1 ? "s" : ""} filled
+                          </p>
+                          {filledSlots.length > 0 && (
+                            <div className="space-y-1">
+                              {filledSlots.slice(0, 4).map((slot) => (
+                                <div key={slot.id} className="flex items-center gap-2">
+                                  <span className="text-[10px] font-mono text-vault-text-faint w-24 shrink-0">
+                                    {SLOT_TYPE_LABELS[slot.slotType] ?? slot.slotType}
+                                  </span>
+                                  <span className="text-xs text-vault-text-muted truncate">
+                                    {slot.accessory?.name ?? "—"}
+                                  </span>
+                                </div>
+                              ))}
+                              {filledSlots.length > 4 && (
+                                <p className="text-[10px] text-vault-text-faint">
+                                  +{filledSlots.length - 4} more
+                                </p>
+                              )}
+                            </div>
                           )}
                         </div>
-                      )}
-                    </div>
 
-                    <Link
-                      href={`/vault/${id}/builds/${build.id}`}
-                      className="flex items-center justify-center gap-2 w-full text-xs bg-[#00C2FF]/10 border border-[#00C2FF]/30 text-[#00C2FF] hover:bg-[#00C2FF]/20 px-3 py-2 rounded transition-colors"
-                    >
-                      <Settings2 className="w-3 h-3" />
-                      Open Configurator
-                    </Link>
-                  </div>
-                );
-              })}
+                        <Link
+                          href={`/vault/${id}/builds/${build.id}`}
+                          className="flex items-center justify-center gap-2 w-full text-xs bg-[#00C2FF]/10 border border-[#00C2FF]/30 text-[#00C2FF] hover:bg-[#00C2FF]/20 px-3 py-2 rounded transition-colors"
+                        >
+                          <Settings2 className="w-3 h-3" />
+                          Open Configurator
+                        </Link>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+
           </div>
           <MaintenanceSection
             firearmId={firearm.id}
